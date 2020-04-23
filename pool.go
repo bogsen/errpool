@@ -37,6 +37,9 @@ func (p *Pool) worker() error {
 	for f := range p.tasks {
 		if err == nil {
 			err = f(p.ctx)
+			if p.workers <= 0 {
+				break
+			}
 		}
 	}
 	return err
@@ -48,15 +51,9 @@ func (p *Pool) Context() context.Context {
 
 func (p *Pool) Go(f func(ctx context.Context) error) {
 	if p.workers <= 0 {
-		select {
-		case p.tasks <- f:
-		default:
-			p.g.Go(p.worker)
-			p.tasks <- f
-		}
-	} else {
-		p.tasks <- f
+		p.g.Go(p.worker)
 	}
+	p.tasks <- f
 }
 
 func (p *Pool) Wait() error {
